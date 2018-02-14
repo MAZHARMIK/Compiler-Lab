@@ -1,0 +1,512 @@
+//RE to DFA using the concept of Tree
+
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
+
+#define MAXSIZE 100
+#define POS 10
+
+int stack[MAXSIZE];
+
+int top = -1;
+
+//Some utility functions for Stack operation
+
+int isempty()
+{
+	if(top == -1)
+	      return 1;
+	else
+      	      return 0;
+}
+
+int isfull()
+{
+	if(top == MAXSIZE)
+      		return 1;
+   	else
+      		return 0;
+}
+
+int peek()
+{
+   	return stack[top];
+}
+
+int pop()
+{
+   	int data;
+   	if(!isempty())
+   	{
+        	data = stack[top];
+      		top = top - 1;
+      		return data;
+   	}
+   	else
+   	{
+        	printf("OOPS. Stack is empty !!\n");
+   	}
+}
+
+int push(int data)
+{
+   if(!isfull())
+   {
+      top = top + 1;
+      stack[top] = data;
+   }
+   else
+   {
+      printf("ERROR!!!STACK IS FULL\n");
+   }
+}
+
+typedef struct node
+{
+    char op;
+    struct node *left_pointer, *right_pointer;
+    int id, fp, lp, array_followpos[POS], arrlp[POS];
+}new_node;
+
+new_node* Newnd(char c)
+{
+    new_node* temp = (new_node*)malloc(sizeof(new_node));
+    temp->op=c;
+    temp->left_pointer=NULL;
+    temp->right_pointer=NULL;
+    temp->id=0;
+    temp->fp=0;
+    temp->lp=0;
+}
+
+//utility function to check the character
+int isCharacter(char c)
+{
+    if(c=='*')
+    {
+        return 1;
+    }
+    else if(c=='(' || c==')')
+    {
+        return 2;
+    }
+    else if(c=='|')
+    {
+        return 3;
+    }
+    else if(c=='.')
+    {
+        return 4;
+    }
+    else if(c>='a' && c<='z' || c=='#')
+    {
+        return 5;
+    }
+    return 0;
+}
+
+
+int checkEnd(new_node* arr[], int l, int h)
+{
+    int i;
+    for(i=l; i<=h; i++){
+        if(arr[i]!=NULL)
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+new_node* ParseRegSimple(new_node* arr[], int l, int h)
+{
+    int i, j, last_node=-1;
+    for(i=l; i<=h; i++)
+    {
+        if(arr[i]!=NULL)
+        {
+            if(isCharacter(arr[i]->op)==1)
+            {
+                arr[i]->left_pointer=arr[last_node];
+                arr[last_node]=NULL;
+            }
+            last_node=i;
+        }
+    }
+    last_node=-1;
+    for(i=l; i<=h; i++)
+    {
+        if(arr[i]!=NULL)
+        {
+            if(isCharacter(arr[i]->op)==4 && last_node!=-1)
+            {
+                arr[i]->left_pointer=arr[last_node];
+                arr[last_node]=NULL;
+                for(j=i+1 ;j<=h; j++)
+                {
+                    if(arr[j]!=NULL) break;
+                }
+                arr[i]->right_pointer=arr[j];;
+                arr[j]=NULL;
+            }
+            last_node=i;
+        }
+    }
+    if(last_node==-1)
+    {
+        return NULL;
+    }
+    new_node *temp=arr[last_node];
+    arr[last_node]=NULL;
+    return temp;
+}
+
+new_node* MyParser(new_node* arr[], int l, int h){
+    int i, flag=0, last_node = -1;
+    for(i=h; i>=l; i--)
+    {
+        if(arr[i]!=NULL)
+        {
+            if(isCharacter(arr[i]->op)==3 && last_node!=-1)
+            {
+                if(checkEnd(arr, l, i-1))
+                {
+                    break;
+                }
+                flag=1;
+                new_node *temp=ParseRegSimple(arr, i+1, h);
+                if(temp!=NULL)
+                {
+                    arr[i]->right_pointer=temp;
+                }
+                temp=MyParser(arr, l, i-1);
+                if(temp!=NULL)
+                {
+                    arr[i]->left_pointer=temp;
+                }
+                last_node=i;
+                break;
+            }
+            last_node=i;
+        }
+    }
+    if(!flag)
+    {
+        return ParseRegSimple(arr, l, h);
+    }
+    else{
+        new_node *temp=arr[last_node];
+        arr[last_node]=NULL;
+        return temp;
+    }
+}
+
+new_node* MyParserBracket(new_node* arr[], int l, int h){
+    int i, j, last_node=-1;
+    for(i=l; i<=h; i++)
+    {
+        if(arr[i]!=NULL && isCharacter(arr[i]->op)==2)
+        {
+            if(arr[i]->op=='(')
+            {
+                push(i);
+            }
+            else
+            {
+                if(!isempty())
+                {
+                    j=pop();
+                    arr[j]=NULL;
+                    arr[i]=MyParser(arr, j+1, i-1);
+                }
+            }
+        }
+    }
+    return MyParser(arr, l, h);
+
+}
+
+void CopySingleArr(int arra[], int arrb[], int len)
+{
+    int i;
+    for(i=0;i<len; i++)
+    {
+        arrb[i]=arra[i];
+    }
+}
+
+void CopyDoubleArr(int arra[], int arrb[], int arrc[], int lena, int lenb)
+{
+    int i, j;
+    for(i=0;i<lena; i++)
+    {
+        arrc[i]=arra[i];
+    }
+    for(j=0;j<lenb; i++, j++)
+    {
+        arrc[i]=arrb[j];
+    }
+}
+
+void PrintArr(int arr[], int len)
+{
+    int i;
+    for(i=0; i<len; i++)
+    {
+        printf("->%d ", arr[i]);
+    }
+    printf("\n");
+}
+
+int IsNullable(new_node *node)
+{
+    int res=0;
+    if(node==NULL)
+    {
+        return 0;
+    }
+    else if(isCharacter(node->op)==1)
+    {
+        res=1;
+        return res;
+    }
+    else if(isCharacter(node->op)==3)
+    {
+        res=res|IsNullable(node->left_pointer);
+        if(res) return res;
+        res=res|IsNullable(node->right_pointer);
+        if(res) return res;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+void PrintPos(new_node *node)
+{
+    if (node == NULL)
+    {
+        return;
+     }
+     PrintPos(node->left_pointer);
+     PrintPos(node->right_pointer);
+     printf("NODE: %c\n", node->op);
+     printf("FIRSTPOS:- ");
+     PrintArr(node->array_followpos, node->fp);
+     printf("LASTPOS:- ");
+     PrintArr(node->arrlp, node->lp);
+     printf("\n");
+}
+
+void PrintFollow(int followPos[POS][POS], int id){
+    int i, j;
+    for(i=1; i<=id; i++){
+        printf("FOLLOW(%d)->: ", i);
+        for(j=0; j<=id; j++){
+            if(followPos[i][j]){
+                printf("%d ", j);
+            }
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void printInorder(new_node* node)
+{
+     if (node == NULL){
+         return;
+     }
+     printInorder(node->left_pointer);
+     printf("%c", node->op);
+     printInorder(node->right_pointer);
+}
+
+void Postorder(new_node* node, int followPos[POS][POS]){
+     if (node == NULL){
+        return;
+     }
+     Postorder(node->left_pointer, followPos);
+     Postorder(node->right_pointer, followPos);
+     if(isCharacter(node->op)==5){
+         node->array_followpos[(node->fp)++]=node->id;
+         node->arrlp[(node->lp)++]=node->id;
+     }
+     else if(isCharacter(node->op)==1){
+         CopySingleArr(node->left_pointer->array_followpos, node->array_followpos, node->left_pointer->fp);
+         node->fp=node->left_pointer->fp;
+         CopySingleArr(node->left_pointer->arrlp, node->arrlp, node->left_pointer->lp);
+         node->lp=node->left_pointer->lp;
+         int i, j;
+         for(i=0; i<node->lp; i++){
+             for(j=0; j<node->fp; j++){
+                 followPos[node->arrlp[i]][node->array_followpos[j]]=1;
+             }
+         }
+     }
+     else if(isCharacter(node->op)==3){
+         CopyDoubleArr(node->left_pointer->array_followpos, node->right_pointer->array_followpos, node->array_followpos, node->left_pointer->fp, node->right_pointer->fp);
+         node->fp=node->left_pointer->fp+node->right_pointer->fp;
+         CopyDoubleArr(node->left_pointer->arrlp, node->right_pointer->arrlp, node->arrlp, node->left_pointer->lp, node->right_pointer->lp);
+         node->lp=node->left_pointer->lp+node->right_pointer->lp;
+     }
+     else if(isCharacter(node->op)==4){
+         if(IsNullable(node->left_pointer)){
+             CopyDoubleArr(node->left_pointer->array_followpos, node->right_pointer->array_followpos, node->array_followpos, node->left_pointer->fp, node->right_pointer->fp);
+             node->fp=node->left_pointer->fp+node->right_pointer->fp;
+         }
+         else{
+             CopySingleArr(node->left_pointer->array_followpos, node->array_followpos, node->left_pointer->fp);
+             node->fp=node->left_pointer->fp;
+         }
+         if(IsNullable(node->right_pointer)){
+             CopyDoubleArr(node->left_pointer->arrlp, node->right_pointer->arrlp, node->arrlp, node->left_pointer->lp, node->right_pointer->lp);
+             node->lp=node->left_pointer->lp+node->right_pointer->lp;
+         }
+         else{
+             CopySingleArr(node->right_pointer->arrlp, node->arrlp, node->right_pointer->lp);
+             node->lp=node->right_pointer->lp;
+         }
+         int i, j;
+         for(i=0; i<node->left_pointer->lp; i++){
+             for(j=0; j<node->right_pointer->fp; j++){
+                 followPos[node->left_pointer->arrlp[i]][node->right_pointer->array_followpos[j]]=1;
+             }
+         }
+     }
+}
+
+int ModExpr(char expr[], char mod_expr[]){
+    int slen=strlen(expr), i, j;
+    for(i=0, j=0; i<slen; i++){
+        if(isCharacter(expr[i])==5){
+            mod_expr[j++]=expr[i];
+            if(isCharacter(expr[i+1])==5){
+                mod_expr[j++]='.';
+            }
+        }
+        else if(isCharacter(expr[i])==1){
+            mod_expr[j++]=expr[i];
+            if(isCharacter(expr[i+1])==5){
+                mod_expr[j++]='.';
+            }
+        }
+        else if(isCharacter(expr[i])==2){
+            if(expr[i]=='('){
+                if(i>0 && expr[i-1]!='(' && expr[i-1]!='|'){
+                    mod_expr[j++]='.';
+                }
+                mod_expr[j++]=expr[i];
+            }
+            else{
+                mod_expr[j++]=expr[i];
+                if(i+1<slen && expr[i+1]!='*' && expr[i+1]!='|' && expr[i+1]!=')'){
+                    mod_expr[j++]='.';
+                }
+            }
+        }
+        else{
+            mod_expr[j++]=expr[i];
+        }
+    }
+    return j;
+}
+
+int CheckState(int states[POS][POS], int l){
+    int i, j, test;
+    for(i=0; i<l; i++){
+        test=0;
+        for(j=0; j<POS; j++){
+            test|=states[i][j]^states[l][j];
+        }
+        if(!test) return i;
+    }
+    return -1;
+}
+
+//driver function
+int main()
+{
+    char expr[50], mod_expr[50];
+    printf("Please Enter the Regular Expression : ");
+
+    scanf("%s", expr);
+
+    int id=1, j=ModExpr(expr, mod_expr), i, k, l, m, st, char_avail[26]={0};
+
+    char char_pos[POS];
+
+    new_node* arr[j];
+
+    for(i=0; i<j; i++){
+        arr[i]=Newnd(mod_expr[i]);
+        if(isCharacter(mod_expr[i])==5){
+            char_pos[id]=mod_expr[i];
+            char_avail[mod_expr[i]-'a']=1;
+            arr[i]->id=id++;
+        }
+    }
+
+    new_node *temp=MyParserBracket(arr, 0, j-1);
+    new_node *root=Newnd('.');
+    new_node *hash=Newnd('#');
+    hash->id=id;
+    root->left_pointer=temp;
+    root->right_pointer=hash;
+
+    int followPos[POS][POS]={0}, states[POS][POS]={0}, mark[POS]={0}, checked[POS]={0};
+
+    printf("\nThis is the required intermediate : ");
+    printInorder(root);
+    printf("\n");
+    Postorder(root, followPos);
+    printf("\n");
+    PrintPos(root);
+    PrintFollow(followPos, id);
+
+    printf("\n=====================================\nThis is the required DFA :- \n");
+    for(i=0, j=0; i<root->fp; i++){
+        states[j][root->array_followpos[i]]=1;
+        mark[j]=-1;
+    }
+    char c;
+    l=1;
+    while(mark[j]==-1)
+    {
+        mark[j]=1;
+        for(i=0; i<POS; i++)
+	{
+            if(states[j][i] && !checked[i]){
+                c=char_pos[i];
+                if(i==id){
+                    continue;
+                }
+                for(k=0; k<POS; k++){
+                    if(states[j][k] && char_pos[k]==c){
+                        checked[k]=1;
+                        for(m=0; m<POS; m++){
+                            states[l][m]|=followPos[k][m];
+                        }
+                    }
+                }
+                st=CheckState(states, l);
+                if(st==-1){
+                    st=l;
+                    mark[l++]=-1;
+                }
+                else{
+                    for(m=0; m<POS; m++){
+                        states[l][m]=0;
+                    }
+                }
+                printf("MOVE(S%d, %c) -> S%d\n", j, c, st);
+            }
+        }
+        for(m=0; m<POS; m++){
+            checked[m]=0;
+        }
+        j++;
+    }
+}
